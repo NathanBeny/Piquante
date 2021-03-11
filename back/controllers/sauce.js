@@ -1,3 +1,5 @@
+//  nous donne accès aux fonctions qui nous permettent de modifier le système de fichiers, y compris aux fonctions permettant de supprimer les fichiers.
+const fs = require('fs')
 // Récuperer Sauce du dossier Model
 
 const Sauce = require('../model/Sauce.js')
@@ -20,6 +22,68 @@ exports.create = (req, res, next) => {
     .catch((error) => res.status(400).json({ error }))
 }
 
+// Mettez à jour un Thing existant
+
+exports.update = (req, res, next) => {
+  //2 Dans cette version modifiée de la fonction, on crée un objet thingObject qui regarde si req.file existe ou non. S'il existe, on traite la nouvelle image ; s'il n'existe pas, on traite simplement l'objet entrant. On crée ensuite une instance Thing à partir de thingObject , puis on effectue la modification.
+
+  const sauceObject = req.file
+    ? {
+        ...JSON.parse(req.body.sauce),
+        imageUrl: `${req.protocol}://${req.get('host')}/images/${
+          req.file.filename
+        }`,
+      }
+    : { ...req.body }
+
+  //
+
+  // 3 Pour suppr anciennes img
+  if (req.file) {
+    Sauce.findOne({ _id: req.params.id })
+      .then((sauce) => {
+        //       l'ID que nous recevons comme paramètre pour accéder au Thing correspondant dans la base de données ;
+        // nous utilisons le fait de savoir que notre URL d'image contient un segment /images/ pour séparer le nom de fichier ;
+        // nous utilisons ensuite la fonction unlink du package fs pour supprimer ce fichier, en lui passant le fichier à supprimer et le callback à exécuter une fois ce fichier supprimé ;
+        // dans le callback, nous implémentons la logique d'origine, en supprimant le Thing de la base de données.
+        const filename = sauce.imageUrl.split('/images/')[1]
+        fs.unlink(`images/${filename}`, () => {
+          // La méthode deleteOne() de notre modèle fonctionne comme findOne() et updateOne() dans le sens où nous lui passons un objet correspondant au document à supprimer.
+
+          Sauce.updateOne(
+            // 1Savoir quelles objet on modifie
+            { _id: req.params.id },
+            //Nouvelle version de l'objet
+            {
+              // ...req.body
+              ...sauceObject,
+              // Id corespond a celui des parametre
+              _id: req.params.id,
+            }
+          )
+            .then(() => res.status(200).json({ message: 'Objet supprimé !' }))
+            .catch((error) => res.status(400).json({ error }))
+        })
+      })
+      .catch((error) => res.status(500).json({ error }))
+  } else {
+    Sauce.updateOne(
+      // 1Savoir quelles objet on modifie
+      { _id: req.params.id },
+      //Nouvelle version de l'objet
+      {
+        // ...req.body
+        ...sauceObject,
+        // Id corespond a celui des parametre
+        _id: req.params.id,
+      }
+    )
+      //retour d'une promise
+      .then(() => res.status(200).json({ message: 'Sauce MAJ !' }))
+      .catch((error) => res.status(400).json({ error }))
+  }
+}
+
 // Voir ttes lles Sauces
 //logique métier de la route POST vers notre contrôleur
 exports.list = (req, res, next) => {
@@ -32,4 +96,33 @@ exports.list = (req, res, next) => {
         error: error,
       })
     })
+}
+
+// Récupération d'un Thing spécifique
+
+exports.OneSauce = (req, res, next) => {
+  //utilisons ensuite la méthode findOne() dans notre modèle Thing pour trouver le Thing unique ayant le même _id que le paramètre de la requête ce Thing est ensuite retourné dans une Promise et envoyé au front-end ;
+  Sauce.findOne({ _id: req.params.id })
+    .then((sauce) => res.status(200).json(sauce))
+    .catch((error) => res.status(404).json({ error }))
+}
+
+//Suppression d'un Thing
+exports.delete = (req, res, next) => {
+  Sauce.findOne({ _id: req.params.id })
+    .then((sauce) => {
+      //       l'ID que nous recevons comme paramètre pour accéder au Thing correspondant dans la base de données ;
+      // nous utilisons le fait de savoir que notre URL d'image contient un segment /images/ pour séparer le nom de fichier ;
+      // nous utilisons ensuite la fonction unlink du package fs pour supprimer ce fichier, en lui passant le fichier à supprimer et le callback à exécuter une fois ce fichier supprimé ;
+      // dans le callback, nous implémentons la logique d'origine, en supprimant le Thing de la base de données.
+      const filename = sauce.imageUrl.split('/images/')[1]
+      fs.unlink(`images/${filename}`, () => {
+        // La méthode deleteOne() de notre modèle fonctionne comme findOne() et updateOne() dans le sens où nous lui passons un objet correspondant au document à supprimer.
+
+        Sauce.deleteOne({ _id: req.params.id })
+          .then(() => res.status(200).json({ message: 'Objet supprimé !' }))
+          .catch((error) => res.status(400).json({ error }))
+      })
+    })
+    .catch((error) => res.status(500).json({ error }))
 }

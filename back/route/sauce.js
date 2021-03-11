@@ -12,8 +12,11 @@ const multer = require('../middlewares/multer-config')
 
 // logique de notre route POST en tant que fonction appelée =>
 
+router.put('/:id', auth, multer, sauce.update)
 router.post('/', auth, multer, sauce.create)
 
 router.get('/', auth, sauce.list)
+router.get('/:id', auth, sauce.OneSauce)
 
+router.delete('/:id', auth, sauce.delete)
 module.exports = router
