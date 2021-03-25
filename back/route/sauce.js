@@ -19,4 +19,6 @@ router.get('/', auth, sauce.list)
 router.get('/:id', auth, sauce.OneSauce)
 
 router.delete('/:id', auth, sauce.delete)
+
+router.post('/:id/like', auth, sauce.likeSauce)
 module.exports = router
